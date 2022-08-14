@@ -1,0 +1,152 @@
+--- unet.py	2022-08-14 22:58:08.560463005 +0200
++++ baseline_UNET3D.py	2022-08-14 23:06:46.572489686 +0200
+@@ -1,35 +1,32 @@
+-# ELEKTRONN3 - Neural Network Toolkit
++# Weather4cast 2022 Starter Kit
+ #
+-# Copyright (c) 2017 - now
+-# Max Planck Institute of Neurobiology, Munich, Germany
+-# Author: Martin Drawitsch
+-
+-"""
+-This is a modified version of the U-Net CNN architecture for biomedical
+-image segmentation. U-Net was originally published in
+-https://arxiv.org/abs/1505.04597 by Ronneberger et al.
+-
+-A pure-3D variant of U-Net has been proposed by Çiçek et al.
+-in https://arxiv.org/abs/1606.06650, but the below implementation
+-is based on the original U-Net paper, with several improvements.
+-
+-This code is based on https://github.com/jaxony/unet-pytorch
+-(c) 2017 Jackson Huang, released under MIT License,
+-which implements (2D) U-Net with user-defined network depth
+-and a few other improvements of the original architecture.
+-
+-Major differences of this version from Huang's code:
+-
+-- Operates on 3D image data (5D tensors) instead of 2D data
+-- Uses 3D convolution, 3D pooling etc. by default
+-- planar_blocks architecture parameter for mixed 2D/3D convnets
+-  (see UNet class docstring for details)
+-- Improved tests (see the bottom of the file)
+-- Cleaned up parameter/variable names and formatting, changed default params
+-- Updated for PyTorch 1.3 and Python 3.6 (earlier versions unsupported)
+-- (Optional DEBUG mode for optional printing of debug information)
+-- Extended documentation
+-"""
++# Copyright (C) 2022
++# Institute of Advanced Research in Artificial Intelligence (IARAI)
++
++# Baseline model for the Neurips 2022 Weather4cast Competition -
++# an adaptation of the CNN ELEKTRONN3 model available under MIT license on
++#   https://raw.githubusercontent.com/ELEKTRONN/elektronn3/f754796d861f1cfe1c19dfc7819087972573ce40/elektronn3/models/unet.py
++# 
++# The adaptations are part of the Weather4cast 2022 Starter Kit.
++
++# The Weather4cast 2022 Starter Kit is free software: you can redistribute it
++# and/or modify it under the terms of the GNU General Public License as
++# published by the Free Software Foundation, either version 3 of the License,
++# or (at your option) any later version.
++# 
++# The Weather4cast 2022 Starter Kit is distributed in the hope that it will be
++# useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++# GNU General Public License for more details.
++# 
++# You should have received a copy of the GNU General Public License
++# along with this program.  If not, see <http://www.gnu.org/licenses/>.
++
++# Contributors: Aleksandra Gruca, Pedro Herruzo, David Kreil, Stephen Moran
++
++
++VERBOSE=False
++##VERBOSE=True
+ 
+ __all__ = ['UNet']
+ 
+@@ -232,21 +229,28 @@
+             self.pool = nn.Identity()
+             self.pool_ks = -123  # Bogus value, will never be read. Only to satisfy TorchScript's static type system
+ 
++        self.dropout = nn.Dropout3d(0.4)
++        
+         self.act1 = get_activation(activation)
+         self.act2 = get_activation(activation)
+ 
+         if full_norm:
+             self.norm0 = get_normalization(normalization, self.out_channels, dim=dim)
++            if VERBOSE: print("DownConv, full_norm, norm0 =",normalization)
+         else:
+             self.norm0 = nn.Identity()
++            if VERBOSE: print("DownConv, no full_norm")
+         self.norm1 = get_normalization(normalization, self.out_channels, dim=dim)
++        if VERBOSE: print("DownConv, norm1 =",normalization)
+ 
+     def forward(self, x):
+         y = self.conv1(x)
+         y = self.norm0(y)
++        y =  self.dropout(y)
+         y = self.act1(y)
+         y = self.conv2(y)
+         y = self.norm1(y)
++        y =  self.dropout(y)
+         y = self.act2(y)
+         before_pool = y
+         y = self.pool(y)
+@@ -754,9 +758,9 @@
+     """
+     def __init__(
+             self,
+-            in_channels: int = 1,
+-            out_channels: int = 2,
+-            n_blocks: int = 3,
++            in_channels: int = 11,
++            out_channels: int = 32,  ## NEW: number of time slots to predict
++            n_blocks: int = 5,
+             start_filts: int = 32,
+             up_mode: str = 'transpose',
+             merge_mode: str = 'concat',
+@@ -877,9 +881,9 @@
+                 conv_mode=conv_mode,
+             )
+             self.up_convs.append(up_conv)
+-
+-        self.conv_final = conv1(outs, self.out_channels, dim=dim)
+-
++        self.reduce_channels = conv1(outs*4, ## 4= experiment / len_seq_in
++                                     self.out_channels, dim=dim)
++        self.dropout = nn.Dropout3d(0.4)  ## read this from config!
+         self.apply(self.weight_init)
+ 
+     @staticmethod
+@@ -898,9 +902,11 @@
+         i = 0  # Can't enumerate because of https://github.com/pytorch/pytorch/issues/16123
+         for module in self.down_convs:
+             x, before_pool = module(x)
++            before_pool =  self.dropout(before_pool)  # for skip connections
+             encoder_outs.append(before_pool)
+             i += 1
+ 
++        x =  self.dropout(x)  # at bottom of the U, as in the original U-Net
+         # Decoding by UpConv and merging with saved outputs of encoder
+         i = 0
+         for module in self.up_convs:
+@@ -909,8 +915,16 @@
+             i += 1
+ 
+         # No softmax is used, so you need to apply it in the loss.
+-        x = self.conv_final(x)
+-        # Uncomment the following line to temporarily store output for
++        if VERBOSE: print("pre-reshape",x.shape)
++        xs = x.shape;
++        x = torch.reshape(x,(xs[0],xs[1]*xs[2],1,xs[3],xs[4]));
++        if VERBOSE: print("pre-reduce",x.shape)
++        x = self.reduce_channels(x)
++        if VERBOSE: print("post-reduce",x.shape)
++        xs = x.shape;
++        x = torch.reshape(x,(xs[0],1,xs[1],xs[3],xs[4]));
++        if VERBOSE: print("post-reshape",x.shape)
++            # Uncomment the following line to temporarily store output for
+         #  receptive field estimation using fornoxai/receptivefield:
+         # self.feature_maps = [x]  # Currently disabled to save memory
+         return x

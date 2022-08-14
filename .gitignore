@@ -1,5 +1,24 @@
+# Emacs backup files
+*~
+
+#Local files to ignore
+*test.py
+*initial_eda.ipynb
+*old_data_utils.py
+*old_visualise.py
+*.pdf
+*.pkl
+split_generation_logs/
+./plots
+*.h5
+
+# large files
+tmp_w4c/
+utils/*lightning_logs/
+*lightning_logs/
+
 # Byte-compiled / optimized / DLL files
-__pycache__/
+__pycache__
 *.py[cod]
 *$py.class
 
@@ -127,3 +146,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+
+#vsc
+.vscode/
