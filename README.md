@@ -128,11 +128,11 @@ Note that all this can easily run for an hour or more, depending on your machine
 
 To activate the environment please run
 ```
-conda acticate w4cNew
+conda activate w4cNew
 ```
 or
 ```
-conda acticate w4c
+conda activate w4c
 ```
 respectively.
 
@@ -159,7 +159,7 @@ python train.py --gpus 0 1 --mode val  --config_path config_baseline.yaml  --che
 ```
 
 ### TensorBoard
-You can of course also use [TensorBoard](https://www.tensorflow.org/tensorboard?) to track and visualize model evaluation metrics during the training process.
+You can of course also use [TensorBoard](https://www.tensorflow.org/tensorboard) to track and visualize model evaluation metrics during the training process.
 The standard TensorBoard command line is:
 ```
 tensorboard --logdir ./lightning_logs
