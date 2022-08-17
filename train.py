@@ -92,14 +92,14 @@ def get_trainer(gpus,params):
     checkpoint_callback = ModelCheckpoint(monitor='val_loss_epoch', save_top_k=3, save_last=True,
                                           filename='{epoch:02d}-{val_loss_epoch:.6f}')
     
-    paralel_training = None
-    ddppplugin = None   
+    parallel_training = None
+    ddpplugin = None   
     if gpus[0] == -1:
         gpus = None
     elif len(gpus) > 1:
-        paralel_training = 'ddp'
-        ddppplugin = DDPPlugin(find_unused_parameters=True)
-    print(f"====== process started on the following GPUs: {gpus} | accelerator: {paralel_training} ======")
+        parallel_training = 'ddp'
+##        ddpplugin = DDPPlugin(find_unused_parameters=True)
+    print(f"====== process started on the following GPUs: {gpus} ======")
     date_time = datetime.datetime.now().strftime("%m%d-%H:%M")
     version = params['experiment']['name']
     version = version + '_' + date_time
@@ -117,16 +117,16 @@ def get_trainer(gpus,params):
         callback_funcs = [checkpoint_callback, early_stop_callback]
     else: 
         callback_funcs = [checkpoint_callback]
-   
-    trainer = pl.Trainer(gpus=gpus, max_epochs=max_epochs,
+
+    trainer = pl.Trainer(devices=gpus, max_epochs=max_epochs,
                          gradient_clip_val=params['model']['gradient_clip_val'],
                          gradient_clip_algorithm=params['model']['gradient_clip_algorithm'],
-                         accelerator=paralel_training,
+                         accelerator="gpu",
                          callbacks=callback_funcs,logger=tb_logger,
                          profiler='simple',precision=params['experiment']['precision'],
-                         plugins=ddppplugin
+                         strategy="ddp"
                         )
-    
+
     return trainer
 
 def do_predict(trainer, model, predict_params, test_data):

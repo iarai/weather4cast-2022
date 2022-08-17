@@ -115,8 +115,7 @@ class UNet_Lightning(pl.LightningModule):
         #recall, precision, F1, acc = recall_precision_f1_acc(y, y_hat)
         #LOGGING
         #values = {'{phase}_loss': loss, '{phase}_acc': acc, '{phase}_recall': recall, '{phase}_precision': precision, 'F1': F1}
-        self.log(f'{phase}_loss', loss,batch_size=self.bs)
-        #self.log_dict(values, batch_size=self.bs)
+        self.log(f'{phase}_loss', loss,batch_size=self.bs, sync_dist=True)
         return loss
                 
     def validation_step(self, batch, batch_idx, phase='val'):
@@ -145,16 +144,17 @@ class UNet_Lightning(pl.LightningModule):
         iou = iou_class(y_hat, y)
 
         #LOGGING
-        self.log(f'{phase}_loss', loss,batch_size=self.bs)
+        self.log(f'{phase}_loss', loss, batch_size=self.bs, sync_dist=True)
         values = {'val_acc': acc, 'val_recall': recall, 'val_precision': precision, 'val_F1': F1, 'val_iou': iou, 'val_CSI': csi}
-        self.log_dict(values, batch_size=self.bs)
+        self.log_dict(values, batch_size=self.bs, sync_dist=True)
     
         return loss
 
     def validation_epoch_end(self, outputs, phase='val'):
         avg_loss = torch.stack([x for x in outputs]).mean()
-        self.log(f'{phase}_loss_epoch', avg_loss, prog_bar=True,batch_size=self.bs)
-        self.log(self.main_metric, avg_loss,batch_size=self.bs)
+        self.log(f'{phase}_loss_epoch', avg_loss, prog_bar=True,
+                 batch_size=self.bs, sync_dist=True)
+        self.log(self.main_metric, avg_loss, batch_size=self.bs, sync_dist=True)
 
 
     def test_step(self, batch, batch_idx, phase='test'):
@@ -178,9 +178,9 @@ class UNet_Lightning(pl.LightningModule):
         iou = iou_class(y_hat, y)
 
         #LOGGING
-        self.log(f'{phase}_loss', loss,batch_size=self.bs)
+        self.log(f'{phase}_loss', loss, batch_size=self.bs, sync_dist=True)
         values = {'test_acc': acc, 'test_recall': recall, 'test_precision': precision, 'test_F1': F1, 'test_iou': iou, 'test_CSI': csi}
-        self.log_dict(values, batch_size=self.bs)
+        self.log_dict(values, batch_size=self.bs, sync_dist=True)
         
         return 0, y_hat
 
