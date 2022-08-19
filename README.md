@@ -59,7 +59,7 @@ After downloading the data, your data files should thus be arranged in folders o
 
 Each HDF file provides a set of (multi-channel) images: 
 
-- **boxi_00XX.train.reflbt0.ns.h5** provides *REFL-BT*, which is a tensor of shape `(20308, 11, 252, 252)` representing 20,308 images with 11 channels of satellite radiances for region XX. These are the input training data. 
+- **boxi_00XX.train.reflbt0.ns.h5** provides *REFL-BT*, which is a tensor of shape `(20308, 11, 252, 252)` representing 20,308 images with 11 channels of satellite radiances for region XX. These are the input training data. The order of the channels in the H5 file corresonds to the following order of the satellite channels: `IR_016, IR_039, IR_087, IR_097, IR_108, IR_120,IR_134, VIS006, VIS008, WV_062, WV_073`. 
 
 - **boxi_00XX.train.rates.crop.h5** provides *rates.crop*, which is a tensor of shape `(20308, 11, 252, 252)` representing OPERA ground-radar rain rates for the corresponding satellite radiances from the train dataset. Model output should be 1 or 0 for rain or no-rain predictions respectively.
 
