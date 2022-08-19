@@ -29,7 +29,7 @@ dataset:
     RATE:
       rainfall_rate-500X500: 
         mask: [-9999000.0, inf, nan, max128] #, 0range0.1] # Mostly used for loss function: values added here are added to a mask and not used for loss 
-        map: [[lessthan0.001, 0], [greaterthan0.001, 1], [-8888000.0, 0], [-9999000.0, 0], [inf, 0], [nan, 0]]   #Mostly used for input preprocessing   # 1. map values 
+        map: [[lessthan0, 0], [greaterthan0, 1], [-8888000.0, 0], [-9999000.0, 0], [inf, 0], [nan, 0]]   #Mostly used for input preprocessing   # 1. map values   
         mean_std: [0.07165331, 0.6302647]
         range: [0, 128]          # 2. we evaluate only pixels in this range
         standardise: False       # 3. use log(x+1) instead & normalize (x/max)
@@ -104,9 +104,9 @@ dataset:
       standardise: True
     
 train:    # model training settings
-  batch_size: 40  # 16 
+  batch_size: 16 #40
   max_epochs: 90
-  n_workers: 16  # 8
+  n_workers: 8  #16
   loss: BCEWithLogitsLoss
   pos_weight: 6.114572
   early_stopping: True
