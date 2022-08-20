@@ -1,5 +1,5 @@
---- unet.py	2022-08-14 22:58:08.560463005 +0200
-+++ baseline_UNET3D.py	2022-08-14 23:06:46.572489686 +0200
+--- unet.py	2022-08-20 12:22:39.713834077 +0200
++++ baseline_UNET3D.py	2022-08-20 12:22:03.482141847 +0200
 @@ -1,35 +1,32 @@
 -# ELEKTRONN3 - Neural Network Toolkit
 +# Weather4cast 2022 Starter Kit
@@ -64,11 +64,26 @@
  
  __all__ = ['UNet']
  
-@@ -232,21 +229,28 @@
+@@ -204,12 +201,13 @@
+     A helper Module that performs 2 convolutions and 1 MaxPool.
+     A ReLU activation follows each convolution.
+     """
+-    def __init__(self, in_channels, out_channels, pooling=True, planar=False, activation='relu',
++    def __init__(self, in_channels, out_channels, dropout_rate, pooling=True, planar=False, activation='relu',
+                  normalization=None, full_norm=True, dim=3, conv_mode='same'):
+         super().__init__()
+ 
+         self.in_channels = in_channels
+         self.out_channels = out_channels
++        self.dropout_rate = dropout_rate
+         self.pooling = pooling
+         self.normalization = normalization
+         self.dim = dim
+@@ -232,21 +230,28 @@
              self.pool = nn.Identity()
              self.pool_ks = -123  # Bogus value, will never be read. Only to satisfy TorchScript's static type system
  
-+        self.dropout = nn.Dropout3d(0.4)
++        self.dropout = nn.Dropout3d(dropout_rate)
 +        
          self.act1 = get_activation(activation)
          self.act2 = get_activation(activation)
@@ -93,7 +108,7 @@
          y = self.act2(y)
          before_pool = y
          y = self.pool(y)
-@@ -754,9 +758,9 @@
+@@ -754,9 +759,10 @@
      """
      def __init__(
              self,
@@ -102,24 +117,44 @@
 -            n_blocks: int = 3,
 +            in_channels: int = 11,
 +            out_channels: int = 32,  ## NEW: number of time slots to predict
++            dropout_rate: float = 0.4,
 +            n_blocks: int = 5,
              start_filts: int = 32,
              up_mode: str = 'transpose',
              merge_mode: str = 'concat',
-@@ -877,9 +881,9 @@
+@@ -815,6 +821,7 @@
+ 
+         self.out_channels = out_channels
+         self.in_channels = in_channels
++        self.dropout_rate = dropout_rate 
+         self.start_filts = start_filts
+         self.n_blocks = n_blocks
+         self.normalization = normalization
+@@ -846,8 +853,9 @@
+             down_conv = DownConv(
+                 ins,
+                 outs,
++                dropout_rate,
+                 pooling=pooling,
+-                planar=planar,
++                planar=planar, 
+                 activation=activation,
+                 normalization=normalization,
+                 full_norm=full_norm,
+@@ -877,9 +885,9 @@
                  conv_mode=conv_mode,
              )
              self.up_convs.append(up_conv)
 -
 -        self.conv_final = conv1(outs, self.out_channels, dim=dim)
 -
-+        self.reduce_channels = conv1(outs*4, ## 4= experiment / len_seq_in
++        self.reduce_channels = conv1(outs*4, ## 4 = experiment / len_seq_in 
 +                                     self.out_channels, dim=dim)
-+        self.dropout = nn.Dropout3d(0.4)  ## read this from config!
++        self.dropout = nn.Dropout3d(dropout_rate)
          self.apply(self.weight_init)
  
      @staticmethod
-@@ -898,9 +902,11 @@
+@@ -898,9 +906,11 @@
          i = 0  # Can't enumerate because of https://github.com/pytorch/pytorch/issues/16123
          for module in self.down_convs:
              x, before_pool = module(x)
@@ -131,7 +166,7 @@
          # Decoding by UpConv and merging with saved outputs of encoder
          i = 0
          for module in self.up_convs:
-@@ -909,8 +915,16 @@
+@@ -909,8 +919,16 @@
              i += 1
  
          # No softmax is used, so you need to apply it in the loss.

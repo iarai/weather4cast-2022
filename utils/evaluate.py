@@ -24,6 +24,7 @@
 from sklearn.metrics import confusion_matrix
 import numpy as np
 import torch as t
+import sys
 
 def get_confusion_matrix(y_true, y_pred): 
     """get confusion matrix from y_true and y_pred
@@ -35,7 +36,9 @@ def get_confusion_matrix(y_true, y_pred):
     Returns:
         confusion matrix
     """    
-    return confusion_matrix(y_true, y_pred).ravel()
+    
+    labels = [0,1]
+    return confusion_matrix(y_true, y_pred, labels=labels).ravel()
 
 def recall_precision_f1_acc(y, y_hat):
     """ returns metrics for recall, precision, f1, accuracy
@@ -74,6 +77,10 @@ def recall_precision_f1_acc(y, y_hat):
             csi = tp / (tp + fn + fp)
 
         acc = (tn + tp) / (tn+fp+fn+tp)
+    else:
+        print("FATAL ERROR: cannot create confusion matrix")
+        print("EXITING....")
+        sys.exit()
 
     return recall, precision, F1, acc, csi
 

@@ -104,9 +104,9 @@ dataset:
       standardise: True
     
 train:    # model training settings
-  batch_size: 16 #40
+  batch_size: 16 # 40
   max_epochs: 90
-  n_workers: 8  #16
+  n_workers: 8  # 16
   loss: BCEWithLogitsLoss
   pos_weight: 6.114572
   early_stopping: True
@@ -114,6 +114,7 @@ train:    # model training settings
   lr: 1e-4
   weight_decay: 2e-2 
   init_filter_size: 32
+  dropout_rate: 0.4
 
 model:    # model definition settings
   model_name: 3D_UNET_base

@@ -414,7 +414,7 @@ def preprocess_fn(x, preprocess, verbose=False):
                 x[np.isinf(x)] = v
             elif 'greaterthan' in q:
                 greater_v = float(q.partition('greaterthan')[2])
-                x[x>=greater_v] = v
+                x[x>greater_v] = v
             elif 'lessthan' in q:
                 less_v = float(q.partition('lessthan')[2])
                 x[x<less_v] = v
