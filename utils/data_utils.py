@@ -32,6 +32,8 @@ import time
 import torch 
 import os
 
+from datetime import datetime, timedelta
+
 VERBOSE = False
 
 #__________________________________________________CREATING/LOADING SAMPLE IDS____________________________________________________
@@ -135,14 +137,12 @@ def generate_sample_ids(data_split, splits_df, len_seq_in, len_seq_predict, regi
 
 def get_training_idxs(df, len_seq_in, len_seq_predict, data_split, region):
     """get sample idxs for training data split
-
     Args:
         df (DataFrame): _description_
         len_seq_in (int): length of input sequence
         len_seq_predict (int): length of prediction sequence
         data_split (String): data split to load sample idxs for
         region (String): region to create samples for
-
     Returns:
         list: list of sample idxs for training data split
     """    
@@ -153,10 +153,25 @@ def get_training_idxs(df, len_seq_in, len_seq_predict, data_split, region):
 
     #non testing 
     for i in range(df.shape[0] - len_seq_in - len_seq_predict + 1):
-        in_seq = [i + j for j in range(len_seq_in)]
-        out_seq = [i + len_seq_in + j for j in range(len_seq_predict)]
-        #print([in_seq, out_seq, region])
-        idxs.append([in_seq, out_seq, region])
+        #date check
+        
+        s_id = df.iloc[i]['date_time_str']
+        e_id = df.iloc[i + len_seq_in + len_seq_predict - 1]['date_time_str']
+        
+        dd1, mm1, yy1 = get_day_month_year(s_id)
+        h1, m1, s1 = get_hours_minutes_seconds(s_id)
+        start_dt = datetime(yy1, mm1, dd1, h1, m1, s1)
+
+        dd2, mm2, yy2 = get_day_month_year(e_id)
+        h2, m2, s2 = get_hours_minutes_seconds(e_id)
+        end_dt = datetime(yy2, mm2, dd2, h2, m2, s2)
+
+        if (start_dt + timedelta(hours=8, minutes=45, seconds=0) == end_dt):
+            #print(get_future_time(df.iloc[i]['time'], (len_seq_predict * 15)))
+            in_seq = [i + j for j in range(len_seq_in)]
+            out_seq = [i + len_seq_in + j for j in range(len_seq_predict)]
+            idxs.append([in_seq, out_seq, region])
+
     return idxs
 
 
@@ -248,13 +263,11 @@ def get_io_validation_times(df, start_index, len_seq_in, len_seq_predict, region
 
 def load_dataset(root, data_split, regions, product): 
     """load dataset from root folder and return as list
-
     Args:
         root (String): root folder to load dataset from
         data_split (String): data split to load dataset for
         regions (list): list of regions to load dataset for
         product (String): product to load dataset for e.g. satellite or radar
-
     Returns:
         list : full dataset 
     """    
@@ -269,6 +282,7 @@ def load_dataset(root, data_split, regions, product):
             f = h5py.File(path, 'r')
             ds = f['rates.crop']
             dataset[region] = ds
+            print(ds.shape)
     else: 
         for region in regions:
             file = f'{region}.{data_split}.reflbt0.ns.h5'
@@ -277,6 +291,7 @@ def load_dataset(root, data_split, regions, product):
             
             ds = f['REFL-BT']
             dataset[region] = ds
+            print(ds.shape)
     return dataset
 
 def get_sequence(seq, root, data_split, region, product, bands, preprocess=None, swap_time_ch=False, ds=None):
@@ -491,6 +506,19 @@ def standardise_time_strings(time):
     else: 
         return time
     return time
+
+def get_hours_minutes_seconds(date_time_str): 
+    h = date_time_str[9:11]
+    m = date_time_str[11:13]
+    s = date_time_str[13:15]
+    return int(h),int(m),int(s)
+
+
+def get_day_month_year(date_time_str): 
+    yy = date_time_str[0:4]
+    mm = date_time_str[4:6]
+    dd = date_time_str[6:8] 
+    return int(dd), int(mm), int(yy)
 
 def time_2_channels(w, height, width):
     """collapse time dimension into channels - (B, C, T, H, W) -> (B, C*T, H, W)

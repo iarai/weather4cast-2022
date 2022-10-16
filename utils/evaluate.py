@@ -62,7 +62,7 @@ def recall_precision_f1_acc(y, y_hat):
     cm = get_confusion_matrix(y.ravel(), y_hat.ravel())
     if len(cm)==4:
         tn, fp, fn, tp = cm
-        recall, precision, F1 = 0, 0, 0
+        recall, precision, F1, acc, csi = 0, 0, 0, 0, 0
 
         if (tp + fn) > 0:
             recall = tp / (tp + fn)
@@ -76,7 +76,8 @@ def recall_precision_f1_acc(y, y_hat):
         if (tp + fn + fp) > 0: 
             csi = tp / (tp + fn + fp)
 
-        acc = (tn + tp) / (tn+fp+fn+tp)
+        if (tn+fp+fn+tp) > 0:
+            acc = (tn + tp) / (tn+fp+fn+tp)
     else:
         print("FATAL ERROR: cannot create confusion matrix")
         print("EXITING....")
