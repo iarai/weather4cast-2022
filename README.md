@@ -33,13 +33,13 @@ For Stage 1 of the competition we provide data from three Eureopean regions sele
 For Stage 1 we provide data from one year only, covering February to December 2019. 
 
 ### Weather4cast 2022 - Stage 2
-In Stage 2 additional data will be provided for 2020 and 2021. Years 2019 and 2020 can then be used for training, while test sets from 2021 assess model robustness to temporal shifts. Additional regions with different climatological characteristics test model robustsness under spatial shifts. There will thus be additional files for the new regions and years and thus the folder structure for stage 2 will have to be expanded accordingly to include additional sub-folders with the data for 2020 and 2021. 
+In Stage 2 additional data will be provided for 2020 and 2021. Years 2019 and 2020 can then be used for training, while test sets from 2021 assess model robustness to temporal shifts. Additional regions with different climatological characteristics test model robustsness under spatial shifts. There are thus additional files for the new regions and years and thus the folder structure for stage 2 has been expanded accordingly to include additional sub-folders with the data for 2020 and 2021. In total there then are 7 regions with full training data in both 2019 and 2020. Three additional regions provide a spatial transfer learning challenge in years 2019 and 2020. For all ten regions, the year 2021 provides a temporal transfer learning challenge. For the seven regions with extensive training data in 2019 and 2020 this constitutes a pure temporal transfer learning challenge. The three additional regions 2021 provide a combined spatial and temporal transfer learning challenge.
 
 
 ## Get the data
 You need to register for the competition and accept its Terms and Conditions to access the data:
 
-- Stage1 Competition [Join and get the data](https://www.iarai.ac.at/weather4cast/get-data-2022/)
+- Stage-1 Competition: [Join and get the data](https://www.iarai.ac.at/weather4cast/get-data-2022/)
 
 Data are provided in [HDF-5](https://docs.h5py.org/en/stable/quick.html) files, separately for each year and data type. In our canonical folder structure `year/datatype/` the HRIT folder holds the satellite data and the OPERA folder provides the ground radar data. The file names reflect the different regions (`boxi_####`) and data splits (`train`, `validation`, and `test`). Ground truth for the test data split is of course withheld.
 
@@ -71,11 +71,11 @@ Each HDF file provides a set of (multi-channel) images:
 
 Both input satellite radiances and output OPERA ground-radar rain rates are given for 252x252 pixel patches but please note that the spatial resolution of the satellite images is about six times lower than the resolution of the ground radar. This means that the 252x252 pixel ground radar patch corresponds to a 42x42 pixel center region in the coarser satellite resolution. The model target region thus is surrounded by a large area providing sufficient context as input for a prediction of future weather. In fact, fast storm clouds from one border of the input data would reach the center target region in about 7-8h.
 
-
 ![Context](/images/opera_satelite_context_explained.png?raw=true "Weather4cast competition")
 
+- Stage-2 Competition: [Join and get the data](https://www.iarai.ac.at/weather4cast/get-data-2022/)
 ## Submission guide
-For submissions you need to upload a ZIP format archive of HDF-5 files that follows the folder structure below. You need to include model predictions for all the regions. For each region, an HDF file should provide *submission*, a tensor of type `float32` and shape `(60, 1, 32, 252, 252)`, representing your predictions for the 60 test samples of a region. You need to follow the file naming convention shown in the example below to indicate the target region. Predictions for different years need to be placed in separate folders as shown below. The folder structure must be preserved in the submitted ZIP file. Please note that for Stage 1 we only ask for predictions for the year 2019, and predictions are simply 1 or 0 to indicate *rain* or *no rain* events respectively.
+For submissions you need to upload a ZIP format archive of HDF-5 files that follows the folder structure below. Optionally, each HDF-5 file can be compressed by gzip, allowing for simple parallelization of the compression step. You need to include model predictions for all the regions. For each region, an HDF file should provide *submission*, a tensor of type `float32` and shape `(60, 1, 32, 252, 252)`, representing your predictions for the 60 test samples of a region. You need to follow the file naming convention shown in the example below to indicate the target region. Predictions for different years need to be placed in separate folders as shown below. The folder structure must be preserved in the submitted ZIP file. Please note that for Stage 1 we only ask for predictions for the year 2019, and predictions are simply 1 or 0 to indicate *rain* or *no rain* events respectively. For the Stage 2 Core Challenge, we ask for predictions for a total of 7 regions in both 2019 and 2020. For the Stage 2 Transfer Learning Challenge, predictions for 3 regions are required in years 2019 and 2020, and for all 10 regions in 2021. To simplify compilation of predictions, we now provide helper scripts in the Starter Kit.
 
 ```
 +-- 2019 –
@@ -92,7 +92,7 @@ To obtain the baseline model, you will need the `wget` command installed - then 
 ```
 to fetch and patch a basic 3D U-Net baseline model.
 
-You will need to download the competition data separately. The sample code assumes that the downloaded data are organized in the following folder structure:
+You will need to download the competition data separately. The sample code assumes that the downloaded data are organized in the following folder structure (shown here for Stage-1 data, conversely for Stage-2):
 
 ```
 +-- data
@@ -171,7 +171,7 @@ Submission files can be generated from a trained model based on the model paramt
 ```
 train.py --gpus 0 --mode predict --config_path config_baseline.yaml --checkpoint "lightning_logs/PATH-TO-YOUR-MODEL-LOGS/checkpoints/YOUR-CHECKPOINT-FILENAME.ckpt"
 ```
-This command currently does not support more than one GPU.
+The code currently does not support generating a prediction for more than one region/year at a time.
 
 The results are saved in a single HDF-5 file named `boxi_00XX.pred.h5` in the `./submssion/YEAR/` folder, where *boxi_00XX* is the name of the region defined in the *predict* section your config file. A sample configuration is shown below:
 ```
@@ -181,7 +181,15 @@ predict:
 ```
 To generate predictions for multiple regions this needs to be run with a separate configuration file for each region.  
 
-After generating prediction files for all the regions, please pack them into a single ZIP file (keeping the `year/` folder structure) and submit them to the Stage 1 leaderboard (TBA).
+After generating prediction files for all the regions, please pack them into a single ZIP file (keeping the `year/` folder structure) and submit them to the [respective Weather4cast leaderboards](https://www.iarai.ac.at/weather4cast/challenge/).
+
+### Automated generation of submissions (helper scripts)
+Considering the much increased number of individual predictions to collect for a leaderboard submission in Stage-2, we now provide helper scripts `mk_pred_core.sh` and `./mk_pred_transfer.sh` that can be used to generate and compile all individual predictions from a single model. The scripts display help text and diagnostics. Note that the use of these scripts is entirely optional because you may prefer to apply different models for different regions. You can provide both an output directory and a GPU ID to generate multiple predictions in parallel. The script will typically run for 20-40 minutes on a recent GPU system.
+
+Example invocation for interactive use:
+```
+./mk_pred_core.sh config_baseline_stage2-pred.yaml 'lightning_logs/yourModelName/checkpoints/yourCheckPointName.ckpt' yourSubmission.core 0 2>&1 | tee yourSubmission.core.log
+```
 
 ## Code and Scientific Abstract
 At the end of the competition paricpants are required to provide:
@@ -194,7 +202,7 @@ We will notify participants of how to provide their scientific abstract. For the
 - c) An **out-of-the-box script** to use your best model **to generate predictions**. The script will read the inputs for the model from a given path and region, using its test folder (like the one used for the leaderboard), and save the outputs on a given path. The path to the folder containing the weights to be loaded by the models can also be an argument of the script. 
 
 
-## Cite
+## Citation
 
 When using or referencing the Weather4cast Competition in general or the competition data please cite: 
 ```
@@ -224,7 +232,7 @@ numpages = {2}
 ```
 
 ## Credits
-The competition is organized by:
+The competition is organized / supported by:
 - [Institute of Advanced Research in Artificial Intelligence, Austria](https://iarai.ac.at)
 - [Silesian University of Technology, Poland](https://polsl.pl)
 - [European Space Agency Φ-lab, Italy](https://philab.phi.esa.int/)
