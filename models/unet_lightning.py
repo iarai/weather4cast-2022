@@ -26,13 +26,14 @@ from sklearn.metrics import confusion_matrix
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from utils.evaluate import *        
+from utils.evaluate import *
+import numpy as np;
 
 #models
 from models.baseline_UNET3D import UNet as Base_UNET3D # 3_3_2 model selection
 
 VERBOSE = False
-#VERBOSE = True
+# VERBOSE = True
 
 class UNet_Lightning(pl.LightningModule):
     def __init__(self, UNet_params: dict, params: dict,
@@ -47,9 +48,7 @@ class UNet_Lightning(pl.LightningModule):
         self.save_hyperparameters()
         self.params = params
         #self.example_input_array = np.zeros((44,252,252))
-   
-        self.main_metric = 'BCE with logits' #mse [log(y+1)-yhay]'
-
+        
         self.val_batch = 0
         
         self.prec = 7
@@ -62,7 +61,19 @@ class UNet_Lightning(pl.LightningModule):
         self.loss_fn = {
             'smoothL1': nn.SmoothL1Loss(), 'L1': nn.L1Loss(), 'mse': F.mse_loss,
             'BCELoss': nn.BCELoss(), 
-            'BCEWithLogitsLoss': nn.BCEWithLogitsLoss(pos_weight=pos_weight), 'CrossEntropy': nn.CrossEntropyLoss(), 'DiceBCE': DiceBCELoss(), 'DiceLoss': DiceLoss()
+            'BCEWithLogitsLoss': nn.BCEWithLogitsLoss(pos_weight=pos_weight), 'CrossEntropy': nn.CrossEntropyLoss(), 'DiceBCE': DiceBCELoss(), 'DiceLoss': DiceLoss(),
+            'mIoULoss': mIoU()
+            }[self.loss]
+        self.main_metric = {
+            'smoothL1':          'Smooth L1',
+            'L1':                'L1',
+            'mse':               'MSE',  # mse [log(y+1)-yhay]'
+            'BCELoss':           'BCE',  # binary cross-entropy
+            'BCEWithLogitsLoss': 'BCE with logits',
+            'CrossEntropy':      'cross-entropy',
+            'DiceBCE':           'Dice BCE',
+            'DiceLoss':          'Dice loss',
+            'mIoULoss':          'Modified IoU'
             }[self.loss]
 
         self.relu = nn.ReLU() # None
@@ -92,9 +103,12 @@ class UNet_Lightning(pl.LightningModule):
         return mask
     
     def _compute_loss(self, y_hat, y, agg=True, mask=None):
+        
+        if self.loss == "mIoULoss":
+            y_hat = 0.5 * torch.tanh(y_hat/2) + 0.5
         if mask is not None:
-            y_hat = self.retrieve_only_valid_pixels(y_hat, mask)
-            y = self.retrieve_only_valid_pixels(y, mask)
+            y_hat[mask] = 0
+            y[mask] = 0
         # print("================================================================================")
         # print(y_hat.shape, y_hat.min(), y_hat.max())
         # print(y.shape, y.min(), y.max())
@@ -134,27 +148,42 @@ class UNet_Lightning(pl.LightningModule):
 
         # todo: add the same plot as in `test_step`
 
-        if self.loss=="BCEWithLogitsLoss":
+        if self.loss == "BCEWithLogitsLoss" or self.loss == "mIoULoss":
             print("applying thresholds to y_hat logits")
             # set the logits threshold equivalent to sigmoid(x)>=0.5
             idx_gt0 = y_hat>=0
             y_hat[idx_gt0] = 1
             y_hat[~idx_gt0] = 0
-        
+
+        if mask is not None:
+            y_hat[mask]=0
+            y[mask]=0
+            
         recall, precision, F1, acc, csi = recall_precision_f1_acc(y, y_hat)
         iou = iou_class(y_hat, y)
 
         #LOGGING
         self.log(f'{phase}_loss', loss, batch_size=self.bs, sync_dist=True)
-        values = {'val_acc': acc, 'val_recall': recall, 'val_precision': precision, 'val_F1': F1, 'val_iou': iou, 'val_CSI': csi}
+        values = {'val_acc': acc, 'val_recall': recall,
+                  'val_precision': precision, 'val_F1': F1, 'val_iou': iou,
+                  'val_CSI': csi
+#                  , 'val_N': float(x.shape[0])
+                  }
         self.log_dict(values, batch_size=self.bs, sync_dist=True)
     
-        return loss
+        return {'loss': loss.cpu(), 'N': x.shape[0],
+                'iou': iou}
 
     def validation_epoch_end(self, outputs, phase='val'):
-        avg_loss = torch.stack([x for x in outputs]).mean()
-        self.log(f'{phase}_loss_epoch', avg_loss, prog_bar=True,
-                 batch_size=self.bs, sync_dist=True)
+        print("Validation epoch end average over batches: ",
+              [batch['N'] for batch in outputs]);
+        avg_loss = np.average([batch['loss'] for batch in outputs],
+                              weights=[batch['N'] for batch in outputs]);
+        avg_iou  = np.average([batch['iou'] for batch in outputs],
+                              weights=[batch['N'] for batch in outputs]);
+        values={f"{phase}_loss_epoch": avg_loss,
+                f"{phase}_iou_epoch":  avg_iou}
+        self.log_dict(values, batch_size=self.bs, sync_dist=True)
         self.log(self.main_metric, avg_loss, batch_size=self.bs, sync_dist=True)
 
 
@@ -168,13 +197,17 @@ class UNet_Lightning(pl.LightningModule):
             print('y_hat', y_hat.shape, 'y', y.shape, '----------------- model')
         loss = self._compute_loss(y_hat, y, mask=mask)
         ## todo: add the same plot as in `test_step`
-        if self.loss=="BCEWithLogitsLoss":
+        if self.loss == "BCEWithLogitsLoss" or self.loss == "mIoULoss":
             print("applying thresholds to y_hat logits")
             # set the logits threshold equivalent to sigmoid(x)>=0.5
             idx_gt0 = y_hat>=0
             y_hat[idx_gt0] = 1
             y_hat[~idx_gt0] = 0
         
+        if mask is not None:
+            y_hat[mask]=0
+            y[mask]=0
+
         recall, precision, F1, acc, csi = recall_precision_f1_acc(y, y_hat)
         iou = iou_class(y_hat, y)
 
@@ -191,7 +224,7 @@ class UNet_Lightning(pl.LightningModule):
         mask = self.get_target_mask(metadata)
         if VERBOSE:
             print('y_hat', y_hat.shape, 'y', y.shape, '----------------- model')
-        if self.loss=="BCEWithLogitsLoss":
+        if self.loss == "BCEWithLogitsLoss" or self.loss == "mIoULoss":
             print("applying thresholds to y_hat logits")
             # set the logits threshold equivalent to sigmoid(x)>=0.5
             idx_gt0 = y_hat>=0
@@ -228,6 +261,7 @@ class UNet_Lightning(pl.LightningModule):
             text = f"{r} | {p} | {f} | acc: {acc} "
 
         return text
+
 
 def main():
     print("running")
@@ -275,3 +309,31 @@ class DiceBCELoss(nn.Module):
         Dice_BCE = BCE + dice_loss
         
         return Dice_BCE
+
+
+## adapted from
+## https://github.com/amirhosseinh77/UNet-AerialSegmentation/blob/main/losses.py
+## by Amirhossein Heydarian (GPL 3)
+##
+class mIoU(nn.Module):
+    def __init__(self, n_classes=1):
+        super(mIoU, self).__init__()
+        self.classes = n_classes
+
+    def forward(self, inputs, target):
+        # inputs => N x Classes x H x W
+        # target_oneHot => N x Classes x H x W
+
+        N = inputs.size()[0]
+        inter = inputs * target
+        ## Sum over all pixels N x C x H x W => N x C
+        inter = inter.view(N,self.classes,-1).sum(2)
+        #Denominator 
+        union= inputs + target - (inputs*target)
+        ## Sum over all pixels N x C x H x W => N x C
+        union = union.view(N,self.classes,-1).sum(2)
+        loss = torch.nan_to_num(inter/union)
+
+        ## Return average loss over classes and batch
+        return 1-loss.mean()
+

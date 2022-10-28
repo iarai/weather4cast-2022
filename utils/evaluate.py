@@ -86,20 +86,20 @@ def recall_precision_f1_acc(y, y_hat):
     return recall, precision, F1, acc, csi
 
 
-SMOOTH = 1e-6
 def iou_class(y_pred: t.Tensor, y_true: t.Tensor):
     #y_true, y_pred = [o.cpu() for o in [y_true, y_pred]]
     #y_true, y_pred = [np.asarray(o) for o in [y_true, y_pred]]
     y_pred = y_pred.int()
     y_true = y_true.int()
     # Outputs: BATCH X H X W
+    
+    intersection = (y_pred & y_true).float().sum()  # Will be zero if Truth=0 or Prediction=0
+    union = (y_pred | y_true).float().sum()  # Will be zero if both are 0
+    
+    if union>0:
+        iou = intersection / union
+    else:
+        iou = 0
 
-    intersection = (y_pred & y_true).float().sum(
-        (0, 1, 2, 3, 4))  # Will be zero if Truth=0 or Prediction=0
-    union = (y_pred | y_true).float().sum(
-        (0, 1, 2, 3, 4))  # Will be zero if both are 0
-
-    iou = (intersection + SMOOTH) / (union + SMOOTH
-                                     )  # We smooth our devision to avoid 0/0
     iou = iou.cpu()
     return iou

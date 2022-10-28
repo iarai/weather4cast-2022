@@ -1,0 +1,126 @@
+experiment:  # Settings for the current experiment
+  name: 'U-NET-252'  # name of the current experiment for logging
+  experiment_folder: 'lightning_logs/'  # folder to save logs 
+  sub_folder: 'baseline'  # logging sub-folder
+  precision: 32  # bit precision of weights. 32 or 16 
+  logging: True  # Toggle logging on/off
+dataset: 
+  # Available bands: 'IR_016', 'IR_039', 'IR_087', 'IR_097', 'IR_108', 'IR_120', 'IR_134', 'VIS006', 'VIS008', 'WV_062', 'WV_073'
+  sat_bands: ['IR_016', 'IR_039', 'IR_087', 'IR_097', 'IR_108', 'IR_120', 'IR_134', 'VIS006', 'VIS008', 'WV_062', 'WV_073']
+  regions: [ 'boxi_0015', 'boxi_0034', 'boxi_0076' ]  # stage-1
+  # or, e.g., ['boxi_0015'] if you want to train your model for one region only
+  input_product: REFL-BT 
+  output_product: RATE 
+  out_channels: 1 
+  in_channels: 11
+  swap_time_ch: True #swap the time and channels axis - if set to False (B, T, C, H, W)
+  full_opera_context: 1512 # (105+42+105)*6; 
+  size_target_center:  252 # 42*6;  
+  len_seq_in: 4        # number of input slots per training sequence
+  len_seq_predict: 32  # output slots; both still hard-coded in places!
+  data_root:  'data' 
+  years: [ '2019' ]  # stage-1
+  splits_path: 'data/timestamps_and_splits_2019.csv'  # stage-1
+  
+  preprocess_OPERA:
+    #  # var mean sd min median max length pos.weight.thr_0 
+    #  1 RATE 0.07165331 0.6302647 0 0 127.9399 5011989696 6.114572 
+    RATE:
+      rainfall_rate-500X500: 
+        mask: [-9999000.0, inf, nan, max128] #, 0range0.1] # Mostly used for loss function: values added here are added to a mask and not used for loss 
+        map: [[lessthan0.0, 0], [greaterthan0.0, 1], [-8888000.0, 0], [-9999000.0, 0], [inf, 0], [nan, 0]]   #Mostly used for input preprocessing   # 1. map values   # stage-1
+        mean_std: [0.07165331, 0.6302647]
+        range: [0, 128]          # 2. we evaluate only pixels in this range
+        standardise: False       # 3. use log(x+1) instead & normalize (x/max)
+        bin: False     
+  preprocess_HRIT:  # 1: map values, 2: normalise in range per variable if process==True
+    #  # var mean sd min median max length
+    #  1 IR_016 0.06605569 0.09920627 0 0.006609255 1.018736 4371869376 
+    #  2 IR_039 273.2187 15.98847 -2.968737 276.0403 336.2159 4371869376
+    #  3 IR_087 268.3977 17.49075 -0.1731693 271.9306 326.3914 4371869376 
+    #  4 IR_097 246.1366 10.81174 -0.05971194 246.4856 301.0066 4371869376 
+    #  5 IR_108 270.1535 18.49373 -0.6266653 274.0552 338.0375 4371869376 
+    #  6 IR_120 268.7993 18.42736 -0.4006808 272.9807 337.3713 4371869376 
+    #  7 IR_134 250.6491 11.70623 -0.5645727 252.9884 300.8559 4371869376 
+    #  8 VIS006 0.06711527 0.1101766 0 0.01692321 1.002381 4371869376 
+    #  9 VIS008 0.08736397 0.1326554 0 0.01656201 1.100475 4371869376 
+    # 10 WV_062 232.1964 5.531017 -2.086555 232.3866 260.9901 4371869376 
+    # 11 WV_073 248.0414 9.495061 -0.4933934 250.0049 289.8742 4371869376 
+    IR_016: 
+      map: [[inf, 0], [nan, 0]]
+      range: [0, 1.02]
+      mean_std: [0.06605569, 0.09920627]
+      standardise: True 
+    IR_039: 
+      map: [[inf, 0], [nan, 0]]
+      range: [0, 350]
+      mean_std: [273.2187, 15.98847]
+      standardise: True 
+    IR_087: 
+      map: [[inf, 0], [nan, 0]]
+      range: [0, 350]
+      mean_std: [268.3977, 17.49075]
+      standardise: True 
+    IR_097: 
+      map: [[inf, 0], [nan, 0]]
+      range: [0, 350]
+      mean_std: [246.1366, 10.81174]
+      standardise: True 
+    IR_108: 
+      map: [[inf, 0], [nan, 0]]
+      range: [0, 350]
+      mean_std: [270.1535, 18.49373]
+      standardise: True 
+    IR_120: 
+      map: [[inf, 0], [nan, 0]]
+      range: [0, 350]
+      mean_std: [268.7993, 18.42736]
+      standardise: True 
+    IR_134: 
+      map: [[inf, 0], [nan, 0]]
+      range: [0, 350]
+      mean_std: [250.6491, 11.70623]
+      standardise: True 
+    VIS006: 
+      map: [[inf, 0], [nan, 0]]
+      range: [0, 1.02]
+      mean_std: [0.06711527, 0.1101766]
+      standardise: True 
+    VIS008: 
+      map: [[inf, 0], [nan, 0]]
+      range: [0, 1.2]  
+      mean_std: [0.08736397, 0.1326554]
+      standardise: True 
+    WV_062: 
+      map: [[inf, 0], [nan, 0]]
+      range: [0, 300]
+      mean_std: [232.1964, 5.531017]
+      standardise: True 
+    WV_073: 
+      map: [[inf, 0], [nan, 0]]
+      range: [0, 300]
+      mean_std: [248.0414, 9.495061]
+      standardise: True
+    
+train:    # model training settings
+  batch_size: 16 # 40
+  max_epochs: 90
+  n_workers: 8  # 16
+  loss: BCEWithLogitsLoss  # requires pos_weight to be set
+  pos_weight: 6.114572
+  early_stopping: True
+  patience: 5
+  lr: 1e-4
+  weight_decay: 2e-2 
+  init_filter_size: 32
+  dropout_rate: 0.4
+
+model:    # model definition settings
+  model_name: 3D_UNET_base
+  in_channels: 11  
+  gradient_clip_val: 2.0
+  gradient_clip_algorithm: value
+
+predict:  # model prediction settings
+  region_to_predict: boxi_0015  # must match one of the names defined in 'dataset' / 'regions'
+  year_to_predict: 2019
