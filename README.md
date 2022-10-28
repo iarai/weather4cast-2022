@@ -189,7 +189,7 @@ Considering the much increased number of individual predictions to collect for a
 
 Example invocation for interactive use:
 ```
-./mk_pred_core.sh config_baseline_stage2-pred.yaml 'lightning_logs/yourModelName/checkpoints/yourCheckPointName.ckpt' yourSubmission.core 0 2>&1 | tee yourSubmission.core.log
+./mk_pred_core.sh config_baseline_stage2-pred.yaml 'lightning_logs/yourModelName/checkpoints/yourCheckPointName.ckpt' yourSubmissionName 0 2>&1 | tee yourSubmission.core.log
 ```
 
 ## Code and Scientific Abstract
