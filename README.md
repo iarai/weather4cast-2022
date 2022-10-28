@@ -40,7 +40,7 @@ In Stage 2 additional data will be provided for 2020 and 2021. Years 2019 and 20
 ## Get the data
 You need to register for the competition and accept its Terms and Conditions to access the data:
 
-- Stage-1 Competition: [Join and get the data](https://www.iarai.ac.at/weather4cast/get-data-2022/)
+- Competition Data: [Join and get the data](https://www.iarai.ac.at/weather4cast/get-data-2022/)
 
 Data are provided in [HDF-5](https://docs.h5py.org/en/stable/quick.html) files, separately for each year and data type. In our canonical folder structure `year/datatype/` the HRIT folder holds the satellite data and the OPERA folder provides the ground radar data. The file names reflect the different regions (`boxi_####`) and data splits (`train`, `validation`, and `test`). Ground truth for the test data split is of course withheld.
 
@@ -56,6 +56,16 @@ After downloading the data, your data files should thus be arranged in folders o
         +-- boxi_0015.train.rates.crop.h5
         +-- boxi_0015.val.rates.crop.h5
         +-- boxi_00XX…….
+2020/
+    +-- HRIT/  ... sub-folder for satellite radiance datasets
+        +-- boxi_0015.test.reflbt0.ns.h5
+        +-- boxi_0015.train.reflbt0.ns.h5
+        +-- boxi_0015.val.reflbt0.ns.h5
+        +-- boxi_00XX…….
+    +-- OPERA/  ... sub-folder for OPERA ground-radar rain rates
+        +-- boxi_0015.train.rates.crop.h5
+        +-- boxi_0015.val.rates.crop.h5
+        +-- boxi_00XX…….  
 ```
 
 Each HDF file provides a set of (multi-channel) images: 
@@ -80,7 +90,10 @@ For submissions you need to upload a ZIP format archive of HDF-5 files that foll
 
 ```
 +-- 2019 –
-    +-- boxi_0015.pred.h5   ...1 file per region for 60 test-sequence predictions of 32 time-slots each
+    +-- boxi_0015.pred.h5.gz   ...1 file per region for 60 test-sequence predictions of 32 time-slots each
+    +-- boxi_00XX….
++-- 2020 –
+    +-- boxi_0015.pred.h5.gz  
     +-- boxi_00XX….
 ```
 
