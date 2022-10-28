@@ -17,6 +17,7 @@
     - [Validation](#validation)
     - [TensorBoard](#tensorboard)
     - [Generating a submission](#generating-a-submission)
+    - [Automated generation of submissions](#automated-generation-of-submissions-helper-scripts)
   - [Code and Scientific Abstract](#code-and-scientific-abstract)
   - [Cite](#cite)
   - [Credits](#credits)
