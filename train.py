@@ -57,6 +57,9 @@ class DataModule(pl.LightningDataModule):
         if mode in ['predict']:    
             print("Loading PREDICTION/TEST dataset -- as test")
             self.test_ds = RainData('test', **self.params)
+        if mode in ['heldout']:    
+            print("Loading HELD-OUT dataset -- as test")
+            self.test_ds = RainData('heldout', **self.params)   
 
     def __load_dataloader(self, dataset, shuffle=True, pin=True):
         dl = DataLoader(dataset, 
@@ -180,7 +183,7 @@ def train(params, gpus, mode, checkpoint_path, model=UNetModel):
         do_test(trainer, model, data.val_dataloader()) 
 
 
-    if mode == 'predict':
+    if mode == 'predict' or mode == 'heldout':
     # ------------
     # PREDICT
     # ------------
@@ -246,5 +249,8 @@ if __name__ == "__main__":
 
     5) generate predictions (plese note that this mode works only for one GPU)
     python train.py --gpus 1 --mode predict  --config_path config_baseline.yaml  --checkpoint "lightning_logs/PATH-TO-YOUR-MODEL-LOGS/checkpoints/YOUR-CHECKPOINT-FILENAME.ckpt"
+
+    6) generate predictions for the held-out dataset (plese note that this mode works only for one GPU)
+    python train.py --gpus 1 --mode heldout  --config_path config_baseline.yaml  --checkpoint "lightning_logs/PATH-TO-YOUR-MODEL-LOGS/checkpoints/YOUR-CHECKPOINT-FILENAME.ckpt"
 
     """
