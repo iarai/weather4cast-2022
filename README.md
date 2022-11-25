@@ -19,9 +19,9 @@
     - [Generating a submission](#generating-a-submission)
     - [Automated generation of submissions](#automated-generation-of-submissions-helper-scripts)
   - [Code and Scientific Abstract](#code-and-scientific-abstract)
-  - [Cite](#cite)
+  - [Cite](#citation)
   - [Credits](#credits)
-
+  
 ## Introduction
 The aim of the 2022 edition of the Weather4cast competition is to predict future high resolution rainfall events from lower resolution satellite radiances. Ground-radar reflectivity measurements are used to calculate pan-European composite rainfall rates by the [Operational Program for Exchange of Weather Radar Information (OPERA)](https://www.eumetnet.eu/activities/observations-programme/current-activities/opera/) radar network. While these are more precise, accurate, and of higher resolution than satellite data, they are expensive to obtain and not available in many parts of the world. We thus want to learn how to predict this high value rain rates from radiation measured by geostationary satellites operated by the [European Organisation for the Exploitation of Meteorological Satellites (EUMETSAT)](https://www.eumetsat.int/). 
 
