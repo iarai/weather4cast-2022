@@ -129,7 +129,7 @@ def get_trainer(gpus,params):
     trainer = pl.Trainer(devices=gpus, max_epochs=max_epochs,
                          gradient_clip_val=params['model']['gradient_clip_val'],
                          gradient_clip_algorithm=params['model']['gradient_clip_algorithm'],
-                         accelerator="gpu",
+                         accelerator="gpu" if gpus is not None else None,
                          callbacks=callback_funcs,logger=tb_logger,
                          profiler='simple',precision=params['experiment']['precision'],
                          strategy="ddp"
